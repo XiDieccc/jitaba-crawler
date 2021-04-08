@@ -46,12 +46,19 @@ const getList = async function(url) {
 const getDetail = async function(detailUrl) {
   const html = await requestPromise(detailUrl)
   const $ = cheerio.load(html)
-  jitabaHandle($).then((score) => {
-    score = await doubanDetail(score)
+  let score = await jitabaHandle($)
+  await doubanDetail(score).then((score) => {
     console.log(score)
-  }).catch((err, score) => {
-    //TODO: 有些详情页里没有 海报，所以结构不一样
+  }, (error) => {
+    console.log(error)
+    console.log(score)
   })
+
+  // console.log(score)
+  // jitabaHandle($).then((score) => {
+  //   score = await doubanDetail(score)
+  //   console.log(score)
+  // })
 
 
 }

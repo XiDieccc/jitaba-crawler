@@ -55,46 +55,53 @@ exports.jitabaHandle = function($) {
     // 若标题无调号，则默认为C调。（比较基础的简易指法）
     score.keys = (score.keys === '') ? 'C' : score.keys
 
+    // 吉他吧有多种不同结构的详情页，以下处理方法不会报错
 
-    // TODO:  以下内容在详情页可能没有，有两种不同结构的详情页
-    try {
-      // 【海报】
-      score.poster = $('#tabzone > p:nth-child(1) > img').attr('src')
+    let tabzoneStr = $('#tabzone').toString()
 
-      // 【曲谱简介】
-      score.description = $('#tabzone > p:nth-child(1)').text().concat($('#tabzone > p:nth-child(2)').text()).replace(/\t|\n/g, '')
+    // 读取所有图片的地址
+    let tabzoneArr = tabzoneStr.split(/src="/g)
+    let imgArr = []
+    tabzoneArr.forEach((str, index) => {
+      if (str.startsWith('http')) {
+        imgArr.push(str.slice(0, str.indexOf('"')))
+      }
+    })
 
-      // 根据曲谱简介 也可得到歌曲名称 
-      score.name = (score.name === '') ? score.description.split('吉他谱')[0] : score.name
-
-
-
-      resolve(score)
-
-    } catch (error) {
-
-      reject(error, score)
-
-    } finally {
-
-      // 【曲谱图片地址】  多个图片地址 将地址拼接
-      // 1 '#tabzone > p:nth-child(2) > img:nth-child(2)'
-      // 2 '#tabzone > img:nth-child(5)' 第一个img元素 是 海报
-      // 3 '#tabzone > img:nth-child(1)' 没有海报，没有简介
-      //结构一
-      let spectrumImgs = $('#tabzone > p:nth-child(2) > img')
-      spectrumImgs.each((index, item) => {
-        if (index === 0) {
-          score.spectrum = $(item).attr('src') + '; '
-        } else if (index === spectrumImgs.length - 1) {
-          score.spectrum = score.spectrum + $(item).attr('src')
-        } else {
-          score.spectrum = score.spectrum + $(item).attr('src') + '; '
-        }
-      })
-
+    // 【海报】 根据曲谱地址，第一张图片为海报地址
+    if (imgArr.length) {
+      score.poster = imgArr[0]
     }
 
+    // 【图片曲谱】 拼接操作 使用 '; ' 分隔
+    imgArr.forEach((str, index) => {
+      if (index === 0) {
+        score.spectrum = str + '; '
+      } else if (index === imgArr.length - 1) {
+        score.spectrum = score.spectrum + str
+      } else {
+        score.spectrum = score.spectrum + str + '; '
+      }
+    })
+
+    // 【曲谱简介】读取 该div中的所有中文字符（不包括img的alt属性）
+    while (true) {
+      tabzoneStr = tabzoneStr.slice(tabzoneStr.indexOf('<') + 1)
+      if (tabzoneStr === '/div>') {
+        break
+      }
+      if (!score.description) {
+        score.description = tabzoneStr.slice(tabzoneStr.indexOf('>') + 1, tabzoneStr.indexOf('<')).trim()
+      } else {
+        score.description += tabzoneStr.slice(tabzoneStr.indexOf('>') + 1, tabzoneStr.indexOf('<')).trim()
+      }
+      tabzoneStr = tabzoneStr.slice(tabzoneStr.indexOf('>') + 1)
+    }
+
+    // 根据曲谱简介 也可得到歌曲名称 
+    score.name = (score.name === '') ? score.description.split('吉他谱')[0] : score.name
+
+    resolve(score)
 
   })
 }
